@@ -55,7 +55,7 @@ export function injectSaga(key, saga, force = false, store = original_store) {
         const task = SagaManager.startSaga(key, saga);
 
         if (!exists) {
-            store.injectedSagas = {...store.injectedSagas, key: task};
+            store.injectedSagas = {...store.injectedSagas, [key]: task};
         }
     }
 }

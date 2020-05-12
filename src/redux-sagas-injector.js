@@ -29,7 +29,7 @@ function createAbortableSaga(key, saga) {
 
 export const SagaManager = {
     startSaga(key, saga) {
-        sagaMiddleware.run(createAbortableSaga(key, saga));
+        return sagaMiddleware.run(createAbortableSaga(key, saga));
     },
 
     cancelSaga(key, store = original_store) {
@@ -42,20 +42,21 @@ export const SagaManager = {
 
 export function reloadSaga(key, saga, store = original_store) {
     SagaManager.cancelSaga(key, store);
-    SagaManager.startSaga(key, saga);
+    return SagaManager.startSaga(key, saga);
 }
 
 export function injectSaga(key, saga, force = false, store = original_store) {
     // If already set, do nothing, except force is specified
-    const exists = store.injectedSagas.includes(key);
+    const exists = Object.prototype.hasOwnProperty.call(store.injectedSagas, key);
     if (!exists || force) {
-        if (!exists) {
-            store.injectedSagas = [...store.injectedSagas, key];
-        }
         if (force) {
             SagaManager.cancelSaga(key, store);
         }
-        SagaManager.startSaga(key, saga);
+        const task = SagaManager.startSaga(key, saga);
+
+        if (!exists) {
+            store.injectedSagas = {...store.injectedSagas, key: task};
+        }
     }
 }
 
@@ -63,22 +64,23 @@ export function injectSagaBulk(sagas, force = false, store = original_store) {
 
     sagas.forEach(x => {
         // If already set, do nothing, except force is specified
-        const exists = store.injectedSagas.includes(x.key);
+        const exists = Object.prototype.hasOwnProperty.call(store.injectedSagas, x.key);
         if (!exists || force) {
-            if (!exists) {
-                store.injectedSagas = [...store.injectedSagas, x.key];
-            }
             if (force) {
                 SagaManager.cancelSaga(x.key, store);
             }
-            SagaManager.startSaga(x.key, x.saga);
+            const task = SagaManager.startSaga(x.key, x.saga);
+
+            if (!exists) {
+                store.injectedSagas = {...store.injectedSagas, [x.key]: task};
+            }
         }
     });
 }
 
 export function createInjectSagasStore(rootSaga, initialReducers, ...args) {
     original_store = createInjectStore(initialReducers, ...args);
-    original_store.injectedSagas = [];
+    original_store.injectedSagas = {};
 
     injectSaga(Object.keys(rootSaga)[0], rootSaga[Object.keys(rootSaga)[0]], false, original_store);
 
